@@ -14,6 +14,11 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import Math._
 
+
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+
 case class Photo(id: String,
                  latitude: Double,
                  longitude: Double)
@@ -24,7 +29,9 @@ object Flickr extends Flickr {
 
   @transient lazy val conf: SparkConf = new SparkConf().setMaster("local").setAppName("NYPD")
   @transient lazy val sc: SparkContext = new SparkContext(conf)
-  sc.setLogLevel("ERROR")
+  
+  /* control log level */
+  // sc.setLogLevel("ERROR")
   /** Main function */
   def main(args: Array[String]): Unit = {
 
@@ -32,12 +39,26 @@ object Flickr extends Flickr {
     val raw     = rawPhotos(lines)
     
     val tupleRdd = lines.map(l => {val a = l.split(","); (a(0), a(1), a(2), a(3))})
+    //val parsedData = lines.map(l => {val a = l.split(","); (a(1).toDouble, a(2).toDouble)})
+    //val parsedData = Vectors.sparse(lines.count(), tupleRdd.collect())
+    
+    //def vectorize(x:RDD[(Double,Double)], size: Int):Vector = {
+      //val vec = Vectors.sparse(size, x.collect())
+    //}
+    //val parsedData = vectorize(lines.count(), tupleRdd) 
+    
+    //val numClusters = 2
+    //val numIterations = 20
+    //val clusters = KMeans.train(parsedData, numClusters, numIterations)
+    
+    
+    //val parsedData = lines.map(s => Vectors.dense(s.split(",").map(_.toDouble))).cache()
     
     //val lines10 = lines.take(10)
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
     for ( a <- tupleRdd ){
-      val b = a._3
+      val b = a._2
       val c = parseDouble(b)
       
       val d = 25.650157
