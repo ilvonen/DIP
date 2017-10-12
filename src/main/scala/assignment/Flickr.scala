@@ -36,7 +36,8 @@ object Flickr extends Flickr {
   def main(args: Array[String]): Unit = {
 
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
-    val raw     = rawPhotos(lines)
+    val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)
+    val raw     = rawPhotos(lines_without1)
     
     //val tupleRdd = lines.map(l => {val a = l.split(","); (a(0), a(1), a(2), a(3))})
     //val parsedData = lines.map(l => {val a = l.split(","); (a(1).toDouble, a(2).toDouble)})
@@ -131,7 +132,8 @@ class Flickr extends Serializable {
     println("rawPhotos")
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     val photos = lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
-    photos.collect.foreach(println)
+    val photos10 = photos.take(10)
+    photos10.foreach(println)
     photos
   }
 
