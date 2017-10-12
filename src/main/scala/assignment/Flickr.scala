@@ -38,8 +38,11 @@ object Flickr extends Flickr {
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
     val raw     = rawPhotos(lines)
     
-    val tupleRdd = lines.map(l => {val a = l.split(","); (a(0), a(1), a(2), a(3))})
+    //val tupleRdd = lines.map(l => {val a = l.split(","); (a(0), a(1), a(2), a(3))})
     //val parsedData = lines.map(l => {val a = l.split(","); (a(1).toDouble, a(2).toDouble)})
+    
+    
+    
     //val parsedData = Vectors.sparse(lines.count(), tupleRdd.collect())
     
     //def vectorize(x:RDD[(Double,Double)], size: Int):Vector = {
@@ -56,7 +59,7 @@ object Flickr extends Flickr {
     
     //val lines10 = lines.take(10)
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
-    
+    /*
     for ( a <- tupleRdd ){
       val b = a._2
       val c = parseDouble(b)
@@ -64,10 +67,12 @@ object Flickr extends Flickr {
       val d = 25.650157
       
       if (c > d) {
-        println(c)
+        //println(c)
       }
     }
-    val count = lines.count()
+    * 
+    */
+    val count = raw.count()
     
     println(count)
     
@@ -122,12 +127,15 @@ class Flickr extends Serializable {
   /** Average the vectors */
   def averageVectors(ps: Iterable[Photo]): (Double, Double) = ???
   
-  def rawPhotos(lines: RDD[String]) /*: RDD[Photo]*/ = {    
+  def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     println("rawPhotos")
-    
+    def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
+    val photos = lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
+    photos.collect.foreach(println)
+    photos
   }
 
     
-  // @tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = ???
+  //@tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = ???
 
 }

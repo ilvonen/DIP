@@ -4,7 +4,7 @@
 		module="dip-essignment$sources_javadoc_2.11"
 		revision="1.0"
 		status="integration"
-		publication="20171010185812"
+		publication="20171011202615"
 	/>
 	<configurations>
 		<conf name="compile" visibility="public" description=""/>
