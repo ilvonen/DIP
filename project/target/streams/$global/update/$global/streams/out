@@ -1,4 +1,4 @@
-[0m[[0minfo[0m] [0mUpdating {file:/C:/Users/ilvontu/Documents/GitHub/DIP/project/}dip-build...[0m
+[0m[[0minfo[0m] [0mUpdating {file:/C:/Users/Tuomas/Documents/GitHub/DIP/project/}dip-build...[0m
 [0m[[0mdebug[0m] [0m:: resolving dependencies :: default#dip-build;0.1-SNAPSHOT[0m
 [0m[[0mdebug[0m] [0m	confs: [compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool][0m
 [0m[[0mdebug[0m] [0m	validate = true[0m
@@ -6537,19 +6537,19 @@
 [0m[[0mdebug[0m] [0m	[NOT REQUIRED] org.scala-sbt#template-resolver;0.1!template-resolver.jar[0m
 [0m[[0mdebug[0m] [0m	[NOT REQUIRED] org.scala-lang#jline;2.10.6!jline.jar[0m
 [0m[[0mdebug[0m] [0m	[NOT REQUIRED] org.fusesource.jansi#jansi;1.4!jansi.jar[0m
-[0m[[0mdebug[0m] [0m:: resolution report :: resolve 1903ms :: artifacts dl 79ms[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT compile produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-compile.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT runtime produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-runtime.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT test produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-test.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT provided produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-provided.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT optional produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-optional.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT compile-internal produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-compile-internal.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT runtime-internal produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-runtime-internal.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT test-internal produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-test-internal.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT plugin produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-plugin.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT sources produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-sources.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT docs produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-docs.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT pom produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-pom.xml[0m
-[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT scala-tool produced in C:\Users\ilvontu\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-scala-tool.xml[0m
-[0m[[0mdebug[0m] [0m	resolve done (1903ms resolve - 79ms download)[0m
+[0m[[0mdebug[0m] [0m:: resolution report :: resolve 4121ms :: artifacts dl 276ms[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT compile produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-compile.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT runtime produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-runtime.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT test produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-test.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT provided produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-provided.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT optional produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-optional.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT compile-internal produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-compile-internal.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT runtime-internal produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-runtime-internal.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT test-internal produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-test-internal.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT plugin produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-plugin.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT sources produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-sources.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT docs produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-docs.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT pom produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-pom.xml[0m
+[0m[[0mdebug[0m] [0m	report for default#dip-build;0.1-SNAPSHOT scala-tool produced in C:\Users\Tuomas\Documents\GitHub\DIP\project\target\resolution-cache\reports\default-dip-build-scala-tool.xml[0m
+[0m[[0mdebug[0m] [0m	resolve done (4121ms resolve - 276ms download)[0m
 [0m[[0minfo[0m] [0mDone updating.[0m

@@ -6,6 +6,7 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import annotation.tailrec
 import scala.reflect.ClassTag
+import scala.util.Random
 
 import java.io.StringReader
 import com.opencsv.CSVReader
@@ -29,6 +30,7 @@ object Flickr extends Flickr {
 
   @transient lazy val conf: SparkConf = new SparkConf().setMaster("local").setAppName("NYPD")
   @transient lazy val sc: SparkContext = new SparkContext(conf)
+  
   
   /* control log level */
   // sc.setLogLevel("ERROR")
@@ -76,10 +78,63 @@ object Flickr extends Flickr {
     
     println(count)
     
-    //val initialMeans = ???
+    // kmeans and main have to use the same k, please fix
+    val k = kmeansKernels
+    val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
+    val maxLatitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.latitude))(0).latitude
+    val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
+    val maxLongitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.longitude))(0).longitude
     
-    //val means   = kmeans(initialMeans, raw)
-    println("TEST1")
+    
+    println("maxLatitude: " + maxLatitude)
+    println("minLatitude: " + minLatitude)
+    println("maxLongitude: " + maxLongitude)
+    println("minLongitude: " + minLongitude)
+    
+    val random = new Random(3)
+    println("random: " + random.nextDouble())
+    
+    
+    val initialMeans = {
+      //var meansArray : Array[(Double, Double)] = Array((5.5,2.6))
+      //val meansArray = scala.collection.mutable.ArrayBuffer[(Double,Double)]()
+      val meansArray = Array.ofDim[(Double, Double)](k)
+      
+      
+      for (i <- 0 to k-1) {
+        val random1 = scala.util.Random.nextDouble()
+        val random2 = scala.util.Random.nextDouble()
+        
+        val randomLatitude = minLatitude + random1*(maxLatitude - minLatitude)
+        val randomLongitude = minLongitude + random2*(maxLongitude - minLongitude)
+        
+        //println("lat:" + randomLatitude +" ; " + "lon:" + randomLongitude)
+        
+        val latLonPair = (randomLatitude, randomLongitude)
+        
+        
+        
+        
+        //println(new Random(i).nextInt(maxLatitude-minLatitude))
+        //meansArray :+ latLonPair
+        //meansArray+=(latLonPair)
+        meansArray(i) = latLonPair
+        //println(meansArray(0)._1)
+      }
+      meansArray
+    }
+    //println("Contents of initialMeans: Array(Double,Double):")
+    for (i <- 0 to k-1) {
+      //println("lat:" + initialMeans(i)._1 +" ; " + "lon:" + initialMeans(i)._2)
+    }
+    
+    //println(initialMeans.length)
+    //classify(raw, initialMeans)
+    //val initialMeans2: Array[(Double, Double)] = Array((59.7, 21.2),(63.4, 30.1), (67.0,  28.4), (64.5, 23.7))
+    val means   = kmeans(initialMeans, raw)
+    println(means.foreach(f => println(f._1 + "," + f._2)))
+    
+    
   }
   
 }
@@ -91,8 +146,7 @@ class Flickr extends Serializable {
   def kmeansEta: Double = 20.0D
   
   /** K-means parameter: Number of clusters */
-  def kmeansKernels = 16
-  
+  def kmeansKernels = 6
   
   /** K-means parameter: Maximum iterations */
   def kmeansMaxIterations = 50
@@ -125,17 +179,98 @@ class Flickr extends Serializable {
   }
 
   /** Average the vectors */
-  def averageVectors(ps: Iterable[Photo]): (Double, Double) = ???
+  def averageVectors(ps: Iterable[Photo]): (Double, Double) = {
+    val latitudeSum = ps.map(_.latitude).sum
+    val avgLatitude = latitudeSum/ps.size
+    
+    val longitudeSum = ps.map(_.longitude).sum
+    val avgLongitude = longitudeSum/ps.size    
+    
+    (avgLatitude, avgLongitude)
+  }
   
   def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     println("rawPhotos")
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     val photos = lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
-    photos.collect.foreach(println)
+    //photos.collect.foreach(println)
     photos
   }
-
+  def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
+    //means.map{(_, photos)}.toMap ++ photos.map.groupBy(findClosest(, means))
+    //val classification = photos.map(p => {val a = p; (a, findClosest((a.latitude, a.longitude), means))})
     
-  //@tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = ???
+    //val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
+    val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
+    
+    //photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means),a)})
+    
+    //classification.saveAsTextFile("C:/Users/Tuomas/Documents/GitHub/DIP/TestOutput")
+    
+    //val textOutputRDD = classification.map(c => {val a = c; (a._1.latitude.toString(),a._1.longitude,a._2) })
+    //val textOutputRDD = classification.map(c => c._1.latitude.toString() + "," + c._1.longitude + "," + c._2)
+    //val textOutputRDD2 = textOutputRDD.map(f => f._1+"\t"+f._2)
+    //val textOutputRDD = classification.map(c => c._1.toString() + "," + c._1.latitude + "," + c._2.longitude)
+    
+    //textOutputRDD.coalesce(1).saveAsTextFile("TestOutput1")
+    
+    classification
+  }
+  
+  def refineMeans(classification: RDD[(Int, Iterable[Photo])], currentMeans: Array[(Double, Double)]) : Array[(Double, Double)] =  {
+    //val newMeans = Array.ofDim[(Double, Double)](kmeansKernels)
+    /*val newMeans : RDD[(Int, (Double,Double))] = {
+      classification.map{f => (f._1, averageVectors(f._2))}
+    }
+    */
+    val newMeans = classification.map{(f => averageVectors(f._2))}.collect()
+    //var i = 0;
+    //classification.groupByKey.foreach(f => { newMeans(f._1) = averageVectors(f._2)})
+    //val groupedData = classification.groupByKey()
+    
+    //groupedData.foreachPartition(f => {newMeans(f._1)
+    //classification.groupBy(_._2).foreach(f => { newMeans(i) = averageVectors(f._2) }
+    //classification.gr
+    
+    
+    //val newClassification = currentMeans.map(m => find
+    newMeans
+    
+  }
+  
+  
+  def converged(kmeansEta: Double)(oldMeans: Array[(Double,Double)], newMeans: Array[(Double, Double)]): Boolean = {
+    oldMeans.zip(newMeans).forall{case (om, nm) => distanceInMeters(om, nm) <= kmeansEta}
+  }
+  
+  def textOutput(classification : RDD[(Int, Iterable[Photo])]) {
+    println("finished")
+    val textOutputRDD = classification.map(f => {f._1.toString + f._2.map(_.latitude).toString() })
+    
+    //val textOutputRDD = classification.flatMap(c => c._1.toString() + "," + c._2.foreach(f => f.longitude))
+    
+    //val textOutputRDD = classification.map(f => {f._1.toString() + f._2.iterator + f._2.iterator.next().toString()})
+    //val photos = lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
+    
+    
+    
+    
+    //textOutputRDD.saveAsTextFile("TestOutput123456")
+  }
+    
+  @tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = {
+    println(iter)
+    val classification : RDD[(Int, Iterable[Photo])] = classify(vectors, means)
+    val newMeans = refineMeans(classification, means)
+    if (converged(kmeansEta)(means.sorted, newMeans.sorted)) { 
+      textOutput(classification)
+      newMeans
+    }
+    else if (iter >= kmeansMaxIterations) {
+      textOutput(classification)
+      newMeans 
+    }
+    else kmeans(newMeans, vectors, iter+1)
+  }
 
 }
