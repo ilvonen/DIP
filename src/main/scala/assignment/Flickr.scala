@@ -48,7 +48,7 @@ object Flickr extends Flickr {
 
     val count = raw.count()
     
-    val k = kmeansKernels
+    //val k = kmeansKernels
     val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
     val maxLatitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.latitude))(0).latitude
     val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
@@ -56,8 +56,8 @@ object Flickr extends Flickr {
  
     
     val initialMeans = {
-      val meansArray = Array.ofDim[(Double, Double)](k)
-      for (i <- 0 to k-1) {
+      val meansArray = Array.ofDim[(Double, Double)](kmeansKernels)
+      for (i <- 0 to kmeansKernels-1) {
         val random1 = scala.util.Random.nextDouble()
         val random2 = scala.util.Random.nextDouble()
         val randomLatitude = minLatitude + random1*(maxLatitude - minLatitude)
@@ -65,14 +65,24 @@ object Flickr extends Flickr {
         val latLonPair = (randomLatitude, randomLongitude)
         meansArray(i) = latLonPair
       }
+      println(meansArray.length)
       meansArray
     }
 
     val means   = kmeans(initialMeans, raw)
     println("Final means:")
-    println(means.foreach(f => println(f._1 + "," + f._2)))
+    var i : Int = 0
+    means.foreach(f => {i = i + 1;println(i + " "+f._1 + "," + f._2)})
     val fw = new PrintWriter(new File("data_stream.csv"))
-    means.foreach(d => Files.write(Paths.get("data_stream.csv"), (d._1 + "," + d._2 + "\n").getBytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) 
+    val textOutput = {
+      var text = ""
+      means.foreach(d => text = text.concat(d._1 + "," + d._2 + "\n"))
+      text = text.substring(0, text.length()-2)
+      text
+    }
+    new PrintWriter("data_stream.csv") {write(textOutput); close }
+    //Files.write(Paths.get("data_stream.csv"), textOutput, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+    //means.foreach(d => Files.write(Paths.get("data_stream.csv"), (d._1 + "," + d._2 + "\n").getBytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND))
   }
 }
 
