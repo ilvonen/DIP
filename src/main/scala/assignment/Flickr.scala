@@ -19,6 +19,9 @@ import Math._
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+import java.util.Random
+import java.io._
+import java.nio.file._
 
 case class Photo(id: String,
                  latitude: Double,
@@ -39,6 +42,7 @@ object Flickr extends Flickr {
 
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
     val raw     = rawPhotos(lines)
+    
     
     //val tupleRdd = lines.map(l => {val a = l.split(","); (a(0), a(1), a(2), a(3))})
     //val parsedData = lines.map(l => {val a = l.split(","); (a(1).toDouble, a(2).toDouble)})
@@ -78,22 +82,19 @@ object Flickr extends Flickr {
     
     println(count)
     
-    // kmeans and main have to use the same k, please fix
     val k = kmeansKernels
     val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
     val maxLatitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.latitude))(0).latitude
     val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
     val maxLongitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.longitude))(0).longitude
     
-    
+    /*
     println("maxLatitude: " + maxLatitude)
     println("minLatitude: " + minLatitude)
     println("maxLongitude: " + maxLongitude)
     println("minLongitude: " + minLongitude)
-    
-    val random = new Random(3)
-    println("random: " + random.nextDouble())
-    
+    */
+ 
     
     val initialMeans = {
       //var meansArray : Array[(Double, Double)] = Array((5.5,2.6))
@@ -133,6 +134,9 @@ object Flickr extends Flickr {
     //val initialMeans2: Array[(Double, Double)] = Array((59.7, 21.2),(63.4, 30.1), (67.0,  28.4), (64.5, 23.7))
     val means   = kmeans(initialMeans, raw)
     println(means.foreach(f => println(f._1 + "," + f._2)))
+    val fw = new PrintWriter(new File("data_stream.csv"))
+    means.foreach(d => Files.write(Paths.get("data_stream.csv"), (d._1 + "," + d._2 + "\n").getBytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND))
+    
     
     
   }
@@ -146,7 +150,7 @@ class Flickr extends Serializable {
   def kmeansEta: Double = 20.0D
   
   /** K-means parameter: Number of clusters */
-  def kmeansKernels = 6
+  def kmeansKernels = 8
   
   /** K-means parameter: Maximum iterations */
   def kmeansMaxIterations = 50
@@ -244,18 +248,62 @@ class Flickr extends Serializable {
   }
   
   def textOutput(classification : RDD[(Int, Iterable[Photo])]) {
+    println(Flickr.sc.version)
     println("finished")
-    val textOutputRDD = classification.map(f => {f._1.toString + f._2.map(_.latitude).toString() })
+    //val textOutputRDD = classification.map(f => {f._1.toString + f._2.flatten(p => {p.latitude.toString() + p.longitude  })
     
-    //val textOutputRDD = classification.flatMap(c => c._1.toString() + "," + c._2.foreach(f => f.longitude))
     
+    
+    
+    //val rdd = Flickr.sc.parallelize(Seq(1 -> Seq((4.1, 3.4), (5.6, 6.7), (3.4, 9.0)), 2 -> Seq((0.4, -4.1), (-3.4, 6.7), (7.0, 8.9))))
+    
+    val csvLike =
+      //for((key, coords) <- rdd; (lat, lon) <- coords) yield s"$key,$lat,lon"
+      //rdd.flatMap { case (key, coords) => coords.map { case (lat, lon) => s"$key,$lat,$lon" } }
+      classification.flatMap { case (key, coords) => coords.map { case (photo) =>  val lat = photo.latitude;
+                                                                                   val lon = photo.longitude;
+                                                                                   s"$key,$lat,$lon" }}
+    //for (row <- csvLike) println(row)
+    
+    
+    
+    
+    // this works, need the index in front though
+    val textOutputRDD = classification.flatMap(f => f._2.map(p => p.latitude.toString() + "," + p.longitude.toString()))
+    
+    val output = classification.flatMap(s=>{
+      var list=List[String]()
+      
+      val b = new StringBuilder
+      for (latlon <- s._2) {
+        //println(s._1.toString() + "," + latlon.latitude + "," + latlon.longitude)
+        
+        //list :+ s._1.toString() + "," + latlon.latitude.toString() + "," + latlon.longitude.toString()'
+        
+        
+      }
+      println(list)
+      list
+    })
+    
+    /*
+    val file = "whatever.txt"
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
+    for (x <- output) {
+      writer.write(x + "\n")
+    }
+    writer.close()
+    */
+    
+   
     //val textOutputRDD = classification.map(f => {f._1.toString() + f._2.iterator + f._2.iterator.next().toString()})
     //val photos = lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
+    val random = scala.util.Random
+    random.nextInt(100000)
     
+    csvLike.saveAsTextFile("TestOutput" + random.nextInt(100000))
     
-    
-    
-    //textOutputRDD.saveAsTextFile("TestOutput123456")
+    //textOutputRDD2.saveAsTextFile("TestOutput" + random.nextInt(100000))
   }
     
   @tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = {
@@ -263,11 +311,11 @@ class Flickr extends Serializable {
     val classification : RDD[(Int, Iterable[Photo])] = classify(vectors, means)
     val newMeans = refineMeans(classification, means)
     if (converged(kmeansEta)(means.sorted, newMeans.sorted)) { 
-      textOutput(classification)
+      //textOutput(classification)
       newMeans
     }
     else if (iter >= kmeansMaxIterations) {
-      textOutput(classification)
+      //textOutput(classification)
       newMeans 
     }
     else kmeans(newMeans, vectors, iter+1)
