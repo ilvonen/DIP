@@ -41,7 +41,8 @@ object Flickr extends Flickr {
   def main(args: Array[String]): Unit = {
 
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
-    val raw     = rawPhotos(lines)
+    val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)
+    val raw     = rawPhotos(lines_without1)
 
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
 
