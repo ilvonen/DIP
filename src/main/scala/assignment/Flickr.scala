@@ -40,9 +40,10 @@ object Flickr extends Flickr {
   /** Main function */
   def main(args: Array[String]): Unit = {
 
-    val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
-   // val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
-   // val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
+    val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
+    //val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple_SYLK.csv")
+    //val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
    // val lines   = sc.textFile("src/main/resources/photos/elbow.csv")
    
     
@@ -55,7 +56,7 @@ object Flickr extends Flickr {
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
 
     val count = raw.count()
-    raw.collect.foreach(println)
+    //raw.collect.foreach(println)
     
     //val k = kmeansKernels
     val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
@@ -147,11 +148,26 @@ class Flickr extends Serializable {
   
   def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
+    def isRightFormat(l: String) = {
+        val a = l.split(",")
+        
+        if (a.length == 4 && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
+          true
+        }
+        else
+          false
+        
+    }
     
     // Ignores empty lines:
     val lines_without_empties = lines.filter(!_.isEmpty())
     
-    lines_without_empties.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
+    // Clean lines which are not in right format:
+    val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )
+    
+    println(cleaned_lines.count)
+
+    cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
   }
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()   
