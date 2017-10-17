@@ -41,6 +41,9 @@ object Flickr extends Flickr {
   def main(args: Array[String]): Unit = {
 
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/elbow.csv")
    
     
     
@@ -49,37 +52,12 @@ object Flickr extends Flickr {
     
     val raw     = rawPhotos(lines_without1)
 
-<<<<<<< HEAD
+
     var initialMeans : Array[(Double, Double)] = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
     while(initialMeans.distinct.size != initialMeans.size) {
       initialMeans = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
-=======
-    def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
-
-    val count = raw.count()
-    raw.collect.foreach(println)
-    
-    //val k = kmeansKernels
-    val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
-    val maxLatitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.latitude))(0).latitude
-    val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
-    val maxLongitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.longitude))(0).longitude
- 
-    
-    val initialMeans = {
-      val meansArray = Array.ofDim[(Double, Double)](kmeansKernels)
-      for (i <- 0 to kmeansKernels-1) {
-        val random1 = scala.util.Random.nextDouble()
-        val random2 = scala.util.Random.nextDouble()
-        val randomLatitude = minLatitude + random1*(maxLatitude - minLatitude)
-        val randomLongitude = minLongitude + random2*(maxLongitude - minLongitude)
-        val latLonPair = (randomLatitude, randomLongitude)
-        meansArray(i) = latLonPair
-      }
-      println(meansArray.length)
-      meansArray
->>>>>>> master
     }
+    def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
     println("Initial means:")
     var j : Int = 0
@@ -163,6 +141,10 @@ class Flickr extends Serializable {
   def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
+    // Ignores empty lines:
+    val lines_without_empties = lines.filter(!_.isEmpty())
+    
+    lines_without_empties.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
   }
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
