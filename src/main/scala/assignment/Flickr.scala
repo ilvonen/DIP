@@ -41,12 +41,21 @@ object Flickr extends Flickr {
   def main(args: Array[String]): Unit = {
 
     val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
+   // val lines   = sc.textFile("src/main/resources/photos/elbow.csv")
+   
+    
+    
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)
+   
+    
     val raw     = rawPhotos(lines_without1)
 
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
 
     val count = raw.count()
+    raw.collect.foreach(println)
     
     //val k = kmeansKernels
     val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
@@ -138,7 +147,11 @@ class Flickr extends Serializable {
   
   def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
-    lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
+    
+    // Ignores empty lines:
+    val lines_without_empties = lines.filter(!_.isEmpty())
+    
+    lines_without_empties.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
   }
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()   
