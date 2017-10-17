@@ -44,51 +44,11 @@ object Flickr extends Flickr {
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)
     val raw     = rawPhotos(lines_without1)
 
-    def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
-
-    val count = raw.count()
-    
-    //val k = kmeansKernels
-    val minLatitude = raw.filter(p => p.latitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude
-    val maxLatitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.latitude))(0).latitude
-    val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
-    val maxLongitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.longitude))(0).longitude
- 
-    /*
-    val initialMeans = {
-      val meansArray = Array.ofDim[(Double, Double)](kmeansKernels)
-      for (i <- 0 to kmeansKernels-1) {
-        val random1 = scala.util.Random.nextDouble()
-        val random2 = scala.util.Random.nextDouble()
-        val randomLatitude = minLatitude + random1*(maxLatitude - minLatitude)
-        val randomLongitude = minLongitude + random2*(maxLongitude - minLongitude)
-        val latLonPair = (randomLatitude, randomLongitude)
-        meansArray(i) = latLonPair
-      }
-      meansArray
-    }
-    */
-    /*
-    val initialMeans : Array[(Double, Double)] = {
-      
-      while (true) {
-        var meansArray = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
-        if (meansArray.size == kmeansKernels) {
-          meansArray
-        }
-      }
-    }
-    
-    */
-    /*
-    var initialMeans : Array[(Double, Double)] = ???
-    while (true) {
+    var initialMeans : Array[(Double, Double)] = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
+    while(initialMeans.distinct.size != initialMeans.size) {
       initialMeans = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
-      if (initialMeans.size == kmeansKernels) {
-        return
-      }
     }
-    */
+    
     println("Initial means:")
     var j : Int = 0
     initialMeans.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
@@ -97,7 +57,6 @@ object Flickr extends Flickr {
     var i : Int = 0
     println("Final means:")
     means.foreach(f => {i = i + 1;println(i + " "+f._1 + "," + f._2)})
-    println("final means size:"+means.size)
     val fw = new PrintWriter(new File("data_stream.csv"))
     val textOutput = {
       var text = ""
@@ -176,14 +135,12 @@ class Flickr extends Serializable {
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
     sumOfSquares(classification)
-    println("classification.keys.count():"+classification.keys.count())
     classification
   }
   
   def refineMeans(classification: RDD[(Int, Iterable[Photo])], currentMeans: Array[(Double, Double)]) : Array[(Double, Double)] =  {
-    println("currentMeans size @ start of refineMeans:" + currentMeans.size)
     var i = 1
-    classification.map{(f => {println("averageVectors call no:" + i); i=i+1 ;averageVectors(f._2)})}.collect()
+    classification.map{(f => {i=i+1 ;averageVectors(f._2)})}.collect()
   }
   
   
