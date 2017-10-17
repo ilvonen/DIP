@@ -36,7 +36,7 @@ object Flickr extends Flickr {
   
   
   /* control log level */
-  // sc.setLogLevel("ERROR")
+  sc.setLogLevel("ERROR")
   /** Main function */
   def main(args: Array[String]): Unit = {
 
@@ -54,7 +54,7 @@ object Flickr extends Flickr {
     val minLongitude = raw.filter(p => p.longitude > 0).takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude
     val maxLongitude = raw.takeOrdered(1)(Ordering[Double].reverse.on(x=>x.longitude))(0).longitude
  
-    
+    /*
     val initialMeans = {
       val meansArray = Array.ofDim[(Double, Double)](kmeansKernels)
       for (i <- 0 to kmeansKernels-1) {
@@ -65,20 +65,44 @@ object Flickr extends Flickr {
         val latLonPair = (randomLatitude, randomLongitude)
         meansArray(i) = latLonPair
       }
-      println(meansArray.length)
       meansArray
     }
+    */
+    /*
+    val initialMeans : Array[(Double, Double)] = {
+      
+      while (true) {
+        var meansArray = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
+        if (meansArray.size == kmeansKernels) {
+          meansArray
+        }
+      }
+    }
+    
+    */
+    /*
+    var initialMeans : Array[(Double, Double)] = ???
+    while (true) {
+      initialMeans = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
+      if (initialMeans.size == kmeansKernels) {
+        return
+      }
+    }
+    */
+    println("Initial means:")
+    var j : Int = 0
+    initialMeans.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
 
     val means   = kmeans(initialMeans, raw)
-    println("Final means:")
     var i : Int = 0
+    println("Final means:")
     means.foreach(f => {i = i + 1;println(i + " "+f._1 + "," + f._2)})
+    println("final means size:"+means.size)
     val fw = new PrintWriter(new File("data_stream.csv"))
     val textOutput = {
       var text = ""
       means.foreach(d => text = text.concat(d._1 + "," + d._2 + "\n"))
-      text = text.substring(0, text.length()-2)
-      text
+      text.substring(0, text.length()-2)
     }
     new PrintWriter("data_stream.csv") {write(textOutput); close }
     //Files.write(Paths.get("data_stream.csv"), textOutput, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
@@ -89,6 +113,15 @@ object Flickr extends Flickr {
 
 class Flickr extends Serializable {
   
+  def sumOfSquares(clusters: RDD[(Int, Iterable[Photo])]) {
+    var sumLat : Double = 0.0
+    var sumLon : Double = 0.0
+    var partitionSize : Int = 0
+    var meanLatLon : (Double, Double) = (0.0, 0.0)
+
+    //clusters.foreachPartition(partition => partition.foreach(f => {println("size:"+f._2.size); f._2.foreach(p => 
+      //{sumLat = sumLat + p.latitude; sumLon = sumLon + p.longitude}); println(f._1); meanLatLon = (sumLat/f._2.size, sumLon/f._2.size); println(meanLatLon);  sumLat = 0.0; sumLon = 0.0}))   
+  }
 /** K-means parameter: Convergence criteria */
   def kmeansEta: Double = 20.0D
   
@@ -131,7 +164,7 @@ class Flickr extends Serializable {
     val avgLatitude = latitudeSum/ps.size
     
     val longitudeSum = ps.map(_.longitude).sum
-    val avgLongitude = longitudeSum/ps.size    
+    val avgLongitude = longitudeSum/ps.size
     
     (avgLatitude, avgLongitude)
   }
@@ -141,11 +174,16 @@ class Flickr extends Serializable {
     lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2))))})
   }
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
-    photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()   
+    val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
+    sumOfSquares(classification)
+    println("classification.keys.count():"+classification.keys.count())
+    classification
   }
   
   def refineMeans(classification: RDD[(Int, Iterable[Photo])], currentMeans: Array[(Double, Double)]) : Array[(Double, Double)] =  {
-    classification.map{(f => averageVectors(f._2))}.collect()
+    println("currentMeans size @ start of refineMeans:" + currentMeans.size)
+    var i = 1
+    classification.map{(f => {println("averageVectors call no:" + i); i=i+1 ;averageVectors(f._2)})}.collect()
   }
   
   
