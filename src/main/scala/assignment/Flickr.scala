@@ -51,7 +51,7 @@ object Flickr extends Flickr {
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)   
     val raw = rawPhotos(lines_without1)
     val raw3d = getScaledRDD(raw)
-    println(raw.count)
+    // println(raw.count)
     
     val latMinMax = getLatMinMax(raw)
     val lonMinMax = getLonMinMax(raw)
@@ -114,7 +114,7 @@ class Flickr extends Serializable {
   def kmeansEta: Double = 20.0D
   
   /** K-means parameter: Number of clusters */
-  def kmeansKernels = 8
+  def kmeansKernels = 16
   
   /** K-means parameter: Maximum iterations */
   def kmeansMaxIterations = 20

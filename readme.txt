@@ -1,9 +1,9 @@
 DIP assignment README
 
-Tuomas Ilvonen & Tommi Parviainen
+Tuomas Ilvonen 240160 & Tommi Parviainen 234093
 
 
-In this assignment, we have completed made the following features:
+In this assignment, we have completed the following features:
 - basic solution
 - dirty data parser
 - third dimension
