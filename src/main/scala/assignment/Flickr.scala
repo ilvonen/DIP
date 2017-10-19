@@ -89,16 +89,14 @@ object Flickr extends Flickr {
       means
     }
     else {
-      //var initialMeans3d : Array[(Double, Double, Double)] = raw3d.takeSample(false, kmeansKernels).map{p => (p._1, p._2, p._3)}
       var initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))
       var initialTimes = raw3d.takeSample(false, kmeansKernels).map(p => (p._3))
-        //while(initialMeans3d.distinct.size != initialMeans3d.size) {
       while(initialCoords.distinct.size != initialCoords.size) {
         
-        /* Test print */
+        /** Test print */
         var j : Int = 0
         initialCoords.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
-        /*						*/
+        /**************/
         
         initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))       
       }
@@ -110,13 +108,6 @@ object Flickr extends Flickr {
       initialMeans3d.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2 + "," + f._3)})
       val means = kmeans3d(initialMeans3d, raw3d)
       println("Final means:")
-      /*
-      var i : Int = 0
-      
-      means.foreach(f => {i = i + 1;println(i + " "+scaleCoordinatesFrom100(f._1, latMinMax._2, latMinMax._1) + "," 
-          + scaleCoordinatesFrom100(f._2, lonMinMax._2, lonMinMax._1) + ","
-          + scaleDateFrom100(f._3))})         
-      */
       textOutput = {
         var text : String = ""
         means.foreach(d => text = text.concat(scaleCoordinatesFrom100(d._1, latMinMax._2, latMinMax._1) + ","
@@ -355,28 +346,15 @@ class Flickr extends Serializable {
     oldMeans.zip(newMeans).forall{case (om, nm) => distanceIn3d(om, nm) <= kmeansEta}
   }
   
-  /** Output results into csv file. NOTE: NOT USED NOW */
-  def textOutput(classification : RDD[(Int, Iterable[Photo])]) {
-    val csvClassification =
-      classification.flatMap { case (key, coords) => coords.map { case (photo) =>  val lat = photo.latitude;
-                                                                                   val lon = photo.longitude;
-                                                                                   s"$key,$lat,$lon" }}
-    val random = scala.util.Random
-    random.nextInt(100000)   
-    csvClassification.saveAsTextFile("TestOutput" + random.nextInt(100000))
-  }
-  
   /** Recursive function to calculate k-means */
   @tailrec final def kmeans(means: Array[(Double, Double)], vectors: RDD[Photo], iter: Int = 1): Array[(Double, Double)] = {
     //println(iter)
     val classification : RDD[(Int, Iterable[Photo])] = classify(vectors, means)
     val newMeans = refineMeans(classification, means)
     if (converged(kmeansEta)(means.sorted, newMeans.sorted)) { 
-      //textOutput(classification)
       newMeans
     }
     else if (iter >= kmeansMaxIterations) {
-      //textOutput(classification)
       newMeans 
     }
     else kmeans(newMeans, vectors, iter+1)
