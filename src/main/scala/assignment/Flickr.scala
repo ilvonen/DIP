@@ -35,7 +35,7 @@ object Flickr extends Flickr {
   @transient lazy val conf: SparkConf = new SparkConf().setMaster("local").setAppName("NYPD")
   @transient lazy val sc: SparkContext = new SparkContext(conf)
   
-  val enable3d = true;
+  
   /** Control log level */
   sc.setLogLevel("ERROR")
   
@@ -53,7 +53,7 @@ object Flickr extends Flickr {
     
     
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)   
-    val raw = rawPhotos(lines_without1, enable3d)
+    val raw = rawPhotos(lines_without1)
     println(raw.count)
     
     val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
@@ -282,7 +282,7 @@ class Flickr extends Serializable {
     
   }
   
-  def rawPhotos(lines: RDD[String], enable3d: Boolean) : RDD[Photo] = {    
+  def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
     def isRightFormat(l: String) = {
@@ -316,14 +316,13 @@ class Flickr extends Serializable {
     val lines_without_empties = lines.filter(!_.isEmpty())
     
     // Clean lines which are not in right format:
+    val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
     if (enable3d) {
         val cleaned_lines = lines_without_empties.filter( f => isRightFormat3D(f) )
-        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
         cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse(a(3))))})
     }
     else {
-        val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )
-        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
+        val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )        
         cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse("2000:01:01 00:00:00")))})
     }
     
