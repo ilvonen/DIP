@@ -16,10 +16,6 @@ import java.text.SimpleDateFormat
 import java.time
 import Math._
 
-
-import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.mllib.linalg.Vector
-import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import java.util.Random
 import java.io._
 import java.nio.file._
@@ -41,73 +37,57 @@ object Flickr extends Flickr {
   
   /** Main function */
   def main(args: Array[String]): Unit = {
-    //val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
+    
+    /** Options for test files */
+    //val lines = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
     val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple_SYLK.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/elbow.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/smallDataset.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/flickr3D2.csv")
+    //val lines = sc.textFile("src/main/resources/photos/flickrDirtySimple_SYLK.csv")
+    //val lines = sc.textFile("src/main/resources/photos/DirtyTest.csv")
+    //val lines = sc.textFile("src/main/resources/photos/elbow.csv")
+    //val lines = sc.textFile("src/main/resources/photos/smallDataset.csv")
+    //val lines = sc.textFile("src/main/resources/photos/flickr3D2.csv")
     //val lines = sc.textFile("src/main/resources/photos/flickr3D.csv")
-    
-    
     
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)   
     val raw = rawPhotos(lines_without1)
+    val raw3d = getScaledRDD(raw)
     println(raw.count)
     
     val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
                        raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
     val lonMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.longitude))(0).longitude, 
                        raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude)
-    
-    val raw3d = getScaledRDD(raw)
-    
-
-    
-    def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
-    
-    
+     
     var textOutput = ""
     
+    /** 2D branch */
     if (!enable3d) {
-      var initialMeans : Array[(Double, Double)] = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
-      while(initialMeans.distinct.size != initialMeans.size) {
-        initialMeans = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
-      }
+      val initialMeans : Array[(Double, Double)] = initializeMeans(raw)
+
       println("Initial means:")
       var j : Int = 0
       initialMeans.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
       val means   = kmeans(initialMeans, raw)
+      
       println("Final means:")
-      var i : Int = 0
-      means.foreach(f => {i = i + 1;println(i + " "+f._1 + "," + f._2)})
       textOutput = {
         var text = ""
         means.foreach(d => text = text.concat(d._1 + "," + d._2 + "\n"))
         text.substring(0, text.length()-2)
       }
-      means
+      println(textOutput)
     }
+    
+    /** 3D branch */
     else {
-      var initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))
-      var initialTimes = raw3d.takeSample(false, kmeansKernels).map(p => (p._3))
-      while(initialCoords.distinct.size != initialCoords.size) {
-        
-        /** Test print */
-        var j : Int = 0
-        initialCoords.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
-        /**************/
-        
-        initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))       
-      }
-      var initialMeans3d = initialCoords.zip(initialTimes).map(f => (f._1._1, f._1._2, f._2))
+      val initialMeans3d = initializeMeans3d(raw3d)
 
       println("Initial means:")
       var j : Int = 0
       
       initialMeans3d.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2 + "," + f._3)})
       val means = kmeans3d(initialMeans3d, raw3d)
+      
       println("Final means:")
       textOutput = {
         var text : String = ""
@@ -115,12 +95,12 @@ object Flickr extends Flickr {
             + scaleCoordinatesFrom100(d._2, lonMinMax._2, lonMinMax._1) + ","
             + scaleDateFrom100(d._3) + "\n"))
         println(text)
-        text.substring(0, text.length()-1)
-        
+        text.substring(0, text.length()-1)   
       }
       
     }
     
+    /** Writing results into data_stream.csv */
     val fw = new PrintWriter(new File("data_stream.csv"))
     new PrintWriter("data_stream.csv") {write(textOutput); close }
   }
@@ -129,21 +109,10 @@ object Flickr extends Flickr {
 
 class Flickr extends Serializable {
   
-  def sumOfSquares(clusters: RDD[(Int, Iterable[Photo])]) {
-    var sumLat : Double = 0.0
-    var sumLon : Double = 0.0
-    var partitionSize : Int = 0
-    var meanLatLon : (Double, Double) = (0.0, 0.0)
-    
-    //clusters.foreach(f => println(":D"))
-
-    //clusters.foreachPartition(partition => partition.foreach(f => {println("size:"+f._2.size); f._2.foreach(p => 
-      //{sumLat = sumLat + p.latitude; sumLon = sumLon + p.longitude}); println(f._1); meanLatLon = (sumLat/f._2.size, sumLon/f._2.size); println(meanLatLon);  sumLat = 0.0; sumLon = 0.0}))   
-  }
   /** Choose to enable 3d or not */
   def enable3d : Boolean = true;
   
-/** K-means parameter: Convergence criteria */
+  /** K-means parameter: Convergence criteria */
   def kmeansEta: Double = 20.0D
   
   /** K-means parameter: Number of clusters */
@@ -159,12 +128,17 @@ class Flickr extends Serializable {
   def maxDate : Date = dateFormat.parse("2016:12:31 23:59:59")
   def minDate : Date = dateFormat.parse("2016:01:01 00:00:00")
   
+  /** Scale coordinates and dates (in double) to 0-100 scale */
   def scaleTo100(value : Double, maxVal : Double, minVal : Double) : Double = {
     (value - minVal)/(maxVal - minVal)*100
   }
+  
+  /** Scale coordinates back to original form */
   def scaleCoordinatesFrom100(value : Double, maxVal : Double, minVal : Double) : Double = {
     value*(maxVal-minVal)/100 + minVal
   }
+  
+  /** Scale dates back to date form */
   def scaleDateFrom100(value : Double) : String = {
     val maxDateLong = maxDate.getTime
     val minDateLong = minDate.getTime
@@ -176,16 +150,38 @@ class Flickr extends Serializable {
     val timezone = java.util.TimeZone.getTimeZone("UTC")
     val wantedDateFormat = new java.text.SimpleDateFormat("d MMMM HH:mm:ss", locale)
     wantedDateFormat.setTimeZone(timezone)
-       
     wantedDateFormat.format(timeOfYear)
   }
   
+  /** Calculate long that represents the time from start of the year. To use seasons. */
   def sinceStartOfYear(date : Date) : Long = {
     val year = date.getYear()+1900
     val dateAtStartOfYear = dateFormat.parse(year.toString()+":01:01 00:00:00")
     date.getTime - dateAtStartOfYear.getTime
   } 
+  /** Initialization means for k-means */
+  def initializeMeans(raw : RDD[Photo]) : Array[(Double, Double)] = {
+    var initialMeans : Array[(Double, Double)] = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)} 
+    while(initialMeans.distinct.size != initialMeans.size) {
+        initialMeans = raw.takeSample(false, kmeansKernels).map{p => (p.latitude, p.longitude)}
+    }
+    initialMeans
+  }
   
+  /** Initialization means for k-means 3d */
+  def initializeMeans3d(raw3d : RDD[(Double, Double, Double)]) : Array[(Double, Double, Double)] = {
+    var initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))
+    var initialTimes = raw3d.takeSample(false, kmeansKernels).map(p => (p._3))
+    
+    /* Avoiding having same initial coordinates */
+    while(initialCoords.distinct.size != initialCoords.size) {        
+      initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))       
+    }
+    var initialMeans3d = initialCoords.zip(initialTimes).map(f => (f._1._1, f._1._2, f._2))
+    initialMeans3d
+  }
+  
+  /** Getting 0-100 scaled RDD for 3d */
   def getScaledRDD(raw : RDD[Photo]) : RDD[(Double, Double, Double)] = {
       val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
                        raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
@@ -199,12 +195,11 @@ class Flickr extends Serializable {
             sinceStartOfYear(maxDate).toDouble,
             sinceStartOfYear(minDate).toDouble))
         )})
-      //scaledRDD.foreach(f => println(f._1 + "," + f._2 + "," + f._3))
       scaledRDD    
   }
   
 
-  //(lat, lon)
+  /** Calculating the distance in meters */
   def distanceInMeters(c1: (Double, Double), c2: (Double, Double)) = {
 		val R = 6371e3
 		val lat1 = toRadians(c1._1)
@@ -216,6 +211,7 @@ class Flickr extends Serializable {
 		Math.sqrt(x*x + y*y) * R;
   }
   
+  /** Calculating the distance in 3d */
   def distanceIn3d(c1: (Double, Double, Double), c2: (Double, Double, Double)) = {
     val distLat = c2._1 - c1._1
     val distLon = c2._2 - c2._2
@@ -337,7 +333,6 @@ class Flickr extends Serializable {
   /** Classify photos by their cluster index */
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
-    sumOfSquares(classification)
     classification
   }
   
