@@ -35,7 +35,7 @@ object Flickr extends Flickr {
   @transient lazy val conf: SparkConf = new SparkConf().setMaster("local").setAppName("NYPD")
   @transient lazy val sc: SparkContext = new SparkContext(conf)
   
-  
+  val enable3d = true;
   /** Control log level */
   sc.setLogLevel("ERROR")
   
@@ -51,7 +51,8 @@ object Flickr extends Flickr {
     val lines = sc.textFile("src/main/resources/photos/flickr3D.csv")
     
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)   
-    val raw = rawPhotos(lines_without1)
+    val raw = rawPhotos(lines_without1, enable3d)
+    println(raw.count)
     
     val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
                        raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
@@ -64,7 +65,7 @@ object Flickr extends Flickr {
     
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
-    val enable3d = true;
+    
     var textOutput = ""
     
     if (!enable3d) {
@@ -275,12 +276,22 @@ class Flickr extends Serializable {
     
   }
   
-  def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
+  def rawPhotos(lines: RDD[String], enable3d: Boolean) : RDD[Photo] = {    
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
+    
     def isRightFormat(l: String) = {
         val a = l.split(",")
         val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
+        if (a.length == 4 && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
+          true
+        }
+        else
+          false
         
+    }
+    def isRightFormat3D(l: String) = {
+        val a = l.split(",")
+        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
         if (a.length == 4 && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
           try {
             dateFormat.parse(a(3))
@@ -289,23 +300,29 @@ class Flickr extends Serializable {
           catch {
             case _: Throwable => {}
             false
-          }
-          
+          }      
         }
         else
           false
-        
     }
     
     // Ignores empty lines:
     val lines_without_empties = lines.filter(!_.isEmpty())
     
     // Clean lines which are not in right format:
-    val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )
+    if (enable3d) {
+        val cleaned_lines = lines_without_empties.filter( f => isRightFormat3D(f) )
+        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
+        cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse(a(3))))})
+    }
+    else {
+        val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )
+        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
+        cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse("2000:01:01 00:00:00")))})
+    }
     
     //println(cleaned_lines.count)
-    val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
-    cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse(a(3))))})
+    
   }
   /** Classify photos by their cluster index */
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
