@@ -53,10 +53,8 @@ object Flickr extends Flickr {
     val raw3d = getScaledRDD(raw)
     println(raw.count)
     
-    val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
-                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
-    val lonMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.longitude))(0).longitude, 
-                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude)
+    val latMinMax = getLatMinMax(raw)
+    val lonMinMax = getLonMinMax(raw)
      
     var textOutput = ""
     
@@ -112,7 +110,7 @@ class Flickr extends Serializable {
   /** Choose to enable 3d or not */
   def enable3d : Boolean = true;
   
-  /** K-means parameter: Convergence criteria */
+  /** K-means parameter: Convergence criteria. K-means 3d uses kmeansEta/20 convergence criteria. */
   def kmeansEta: Double = 20.0D
   
   /** K-means parameter: Number of clusters */
@@ -127,6 +125,17 @@ class Flickr extends Serializable {
   /** Maximum and minimum dates for the purpose of scaling dates for seasons */
   def maxDate : Date = dateFormat.parse("2016:12:31 23:59:59")
   def minDate : Date = dateFormat.parse("2016:01:01 00:00:00")
+  
+  /** Max and minimum latitudes and longitudes from data, for scaling and initializing */
+  def getLatMinMax(raw : RDD[Photo]) : (Double, Double) = {
+    (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude,
+    (raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude))
+  }
+  def getLonMinMax(raw : RDD[Photo]) : (Double, Double) = {
+    (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.longitude))(0).longitude,
+    (raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude))
+  }
+                   
   
   /** Scale coordinates and dates (in double) to 0-100 scale */
   def scaleTo100(value : Double, maxVal : Double, minVal : Double) : Double = {
@@ -155,6 +164,7 @@ class Flickr extends Serializable {
   
   /** Calculate long that represents the time from start of the year. To use seasons. */
   def sinceStartOfYear(date : Date) : Long = {
+    // java date.getYear gives currentYear-1900
     val year = date.getYear()+1900
     val dateAtStartOfYear = dateFormat.parse(year.toString()+":01:01 00:00:00")
     date.getTime - dateAtStartOfYear.getTime
@@ -183,10 +193,8 @@ class Flickr extends Serializable {
   
   /** Getting 0-100 scaled RDD for 3d */
   def getScaledRDD(raw : RDD[Photo]) : RDD[(Double, Double, Double)] = {
-      val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
-                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
-      val lonMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.longitude))(0).longitude, 
-                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude)                                  
+      val latMinMax = getLatMinMax(raw)
+      val lonMinMax = getLonMinMax(raw)                                 
       
       val scaledRDD = raw.map(p => {(
         (scaleTo100(p.latitude, latMinMax._2, latMinMax._1)),
@@ -262,7 +270,7 @@ class Flickr extends Serializable {
     (avgLatitude, avgLongitude)
   }
   
-  /** Average the vectors 3d*/
+  /** Average the vectors 3d */
   def averageVectors3d(ps: Iterable[(Double, Double, Double)]): (Double, Double, Double) = {
     var sumLat = 0.0
     var sumLon = 0.0
@@ -287,7 +295,6 @@ class Flickr extends Serializable {
      *  Returns true if ok, in other cases false. For 2D purposes. */
     def isRightFormat(l: String) = {
         val a = l.split(",")
-        val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
         if ((a.length == 4 || a.length ==3 ) && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
           true
         }
@@ -357,9 +364,10 @@ class Flickr extends Serializable {
     oldMeans.zip(newMeans).forall{case (om, nm) => distanceInMeters(om, nm) <= kmeansEta}
   }
   
-  /** Check if points are close enough to one another 3d */
+  /** Check if points are close enough to one another 3d. KmeansEta has been divided by 20, 
+   *  since the scale in 3d is a lot smaller, 1 to 100 */
   def converged3d(kmeansEta: Double)(oldMeans: Array[(Double, Double, Double)], newMeans: Array[(Double, Double, Double)]) : Boolean = {
-    oldMeans.zip(newMeans).forall{case (om, nm) => distanceIn3d(om, nm) <= kmeansEta}
+    oldMeans.zip(newMeans).forall{case (oldmeans, newmeans) => distanceIn3d(oldmeans, newmeans) <= kmeansEta/20}
   }
   
   /** Recursive function to calculate k-means */
@@ -367,6 +375,7 @@ class Flickr extends Serializable {
     //println(iter)
     val classification : RDD[(Int, Iterable[Photo])] = classify(vectors, means)
     val newMeans = refineMeans(classification, means)
+    
     if (converged(kmeansEta)(means.sorted, newMeans.sorted)) { 
       newMeans
     }
