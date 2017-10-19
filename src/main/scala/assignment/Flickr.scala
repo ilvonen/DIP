@@ -42,13 +42,13 @@ object Flickr extends Flickr {
   /** Main function */
   def main(args: Array[String]): Unit = {
     //val lines   = sc.textFile("src/main/resources/photos/dataForBasicSolution.csv")
-    //val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
+    val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple.csv")
     //val lines   = sc.textFile("src/main/resources/photos/flickrDirtySimple_SYLK.csv")
     //val lines   = sc.textFile("src/main/resources/photos/DirtyTest.csv")
     //val lines   = sc.textFile("src/main/resources/photos/elbow.csv")
     //val lines   = sc.textFile("src/main/resources/photos/smallDataset.csv")
     //val lines   = sc.textFile("src/main/resources/photos/flickr3D2.csv")
-    val lines = sc.textFile("src/main/resources/photos/flickr3D.csv")
+    //val lines = sc.textFile("src/main/resources/photos/flickr3D.csv")
     
     
     
@@ -283,18 +283,24 @@ class Flickr extends Serializable {
   }
   
   def rawPhotos(lines: RDD[String]) : RDD[Photo] = {    
+    
+    /** Tries to convert String to Double. If not possible, 0. */
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
+    /** Checks whether the format of line (string) is in right format. 
+     *  Returns true if ok, in other cases false. For 2D purposes. */
     def isRightFormat(l: String) = {
         val a = l.split(",")
         val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
-        if (a.length == 4 && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
+        if ((a.length == 4 || a.length ==3 ) && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
           true
         }
-        else
+        else {
           false
-        
+        }
     }
+    /** Checks whether the format of line (string) is in right format. 
+     *  Returns true if ok, in other cases false For 3D purposes. */
     def isRightFormat3D(l: String) = {
         val a = l.split(",")
         val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
@@ -312,10 +318,11 @@ class Flickr extends Serializable {
           false
     }
     
-    // Ignores empty lines:
+    /** Ignores empty lines: */
     val lines_without_empties = lines.filter(!_.isEmpty())
     
-    // Clean lines which are not in right format:
+    /** Clean lines which are not in right format. Processing depends on whether the 3rd dimension is 
+     *  activated or not. */
     val dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd kk:mm:ss")
     if (enable3d) {
         val cleaned_lines = lines_without_empties.filter( f => isRightFormat3D(f) )
@@ -325,10 +332,8 @@ class Flickr extends Serializable {
         val cleaned_lines = lines_without_empties.filter( f => isRightFormat(f) )        
         cleaned_lines.map(l => {val a = l.split(","); (Photo(a(0), parseDouble(a(1)), parseDouble(a(2)), dateFormat.parse("2000:01:01 00:00:00")))})
     }
-    
-    //println(cleaned_lines.count)
-    
   }
+  
   /** Classify photos by their cluster index */
   def classify(photos: RDD[Photo], means: Array[(Double, Double)]): RDD[(Int, Iterable[Photo])] = {
     val classification = photos.map(p => {val a = p; (findClosest((a.latitude, a.longitude), means), a)}).groupByKey()
