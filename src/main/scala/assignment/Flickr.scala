@@ -50,6 +50,8 @@ object Flickr extends Flickr {
     //val lines   = sc.textFile("src/main/resources/photos/flickr3D2.csv")
     val lines = sc.textFile("src/main/resources/photos/flickr3D.csv")
     
+    
+    
     val lines_without1 = lines.mapPartitionsWithIndex((i, it) => if (i == 0) it.drop(1) else it)   
     val raw = rawPhotos(lines_without1)
     
@@ -64,7 +66,7 @@ object Flickr extends Flickr {
     
     def parseDouble(s: String) = try { s.toDouble } catch { case _ => 0 }
     
-    val enable3d = true;
+    
     var textOutput = ""
     
     if (!enable3d) {
@@ -87,10 +89,20 @@ object Flickr extends Flickr {
       means
     }
     else {
-      var initialMeans3d : Array[(Double, Double, Double)] = raw3d.takeSample(false, kmeansKernels).map{p => (p._1, p._2, p._3)}
-        while(initialMeans3d.distinct.size != initialMeans3d.size) {
-        initialMeans3d = raw3d.takeSample(false, kmeansKernels).map{p => (p._1, p._2, p._3)}
+      //var initialMeans3d : Array[(Double, Double, Double)] = raw3d.takeSample(false, kmeansKernels).map{p => (p._1, p._2, p._3)}
+      var initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))
+      var initialTimes = raw3d.takeSample(false, kmeansKernels).map(p => (p._3))
+        //while(initialMeans3d.distinct.size != initialMeans3d.size) {
+      while(initialCoords.distinct.size != initialCoords.size) {
+        
+        /* Test print */
+        var j : Int = 0
+        initialCoords.foreach(f => {j = j + 1;println(j + " "+f._1 + "," + f._2)})
+        /*						*/
+        
+        initialCoords = raw3d.takeSample(false, kmeansKernels).map(p => (p._1, p._2))       
       }
+      var initialMeans3d = initialCoords.zip(initialTimes).map(f => (f._1._1, f._1._2, f._2))
 
       println("Initial means:")
       var j : Int = 0
@@ -136,6 +148,9 @@ class Flickr extends Serializable {
     //clusters.foreachPartition(partition => partition.foreach(f => {println("size:"+f._2.size); f._2.foreach(p => 
       //{sumLat = sumLat + p.latitude; sumLon = sumLon + p.longitude}); println(f._1); meanLatLon = (sumLat/f._2.size, sumLon/f._2.size); println(meanLatLon);  sumLat = 0.0; sumLon = 0.0}))   
   }
+  /** Choose to enable 3d or not */
+  def enable3d : Boolean = true;
+  
 /** K-means parameter: Convergence criteria */
   def kmeansEta: Double = 20.0D
   
@@ -146,7 +161,7 @@ class Flickr extends Serializable {
   def kmeansMaxIterations = 20
   
   /** Date format to be used */
-  def dateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss")
+  def dateFormat : SimpleDateFormat = new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss")
   
   /** Maximum and minimum dates for the purpose of scaling dates for seasons */
   def maxDate : Date = dateFormat.parse("2016:12:31 23:59:59")
@@ -183,7 +198,7 @@ class Flickr extends Serializable {
       val latMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.latitude))(0).latitude, 
                        raw.takeOrdered(1)(Ordering[Double].on(p=>p.latitude))(0).latitude)
       val lonMinMax = (raw.takeOrdered(1)(Ordering[Double].reverse.on(p=>p.longitude))(0).longitude, 
-                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude)                 
+                       raw.takeOrdered(1)(Ordering[Double].on(p=>p.longitude))(0).longitude)                                  
       
       val scaledRDD = raw.map(p => {(
         (scaleTo100(p.latitude, latMinMax._2, latMinMax._1)),
@@ -283,7 +298,7 @@ class Flickr extends Serializable {
         
         if (a.length == 4 && parseDouble(a(1)) != 0 && parseDouble(a(2)) != 0){
           try {
-            dateFormat.parse(a(3))
+            dateFormat.parse(a(3)) 
             true
           }
           catch {
